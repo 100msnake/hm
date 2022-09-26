@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 
 
 class MainViewModel : ViewModel() {
@@ -241,6 +240,6 @@ class MainViewModel : ViewModel() {
 
 
 // TODO currently the notification channel is not deleted when the last blah using that topic is deleted.
-//  Maybe not neccessary, but i thought i would mention it. MF
+//  Maybe not necessary, but i thought i would mention it. MF
 
 

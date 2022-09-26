@@ -14,11 +14,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Surface
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.toLowerCase
-import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Observer
@@ -588,6 +584,8 @@ class MainActivity : ComponentActivity() {
 
     private fun getListOfPermissions(): List<String> {
 
+        // see https://developers.google.com/nearby/connections/strategies
+
         var askForThesePermissions: List<String> = listOf(
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN,
@@ -626,7 +624,7 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             askForThesePermissions = listOf(
 
                 Manifest.permission_group.NEARBY_DEVICES,
@@ -635,9 +633,11 @@ class MainActivity : ComponentActivity() {
                 Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.ACCESS_WIFI_STATE,
                 Manifest.permission.CHANGE_WIFI_STATE,
+                Manifest.permission.POST_NOTIFICATIONS
 
-                )
+            )
         }
+
 
         return askForThesePermissions
 
