@@ -142,10 +142,10 @@ val sky_blue = Color(0xff00B5E2)
 val sea_blue = Color(0xff006994)
 
 private val LightColors = lightColors(
-    primary = sea_blue,
+    primary = sky_blue,
     primaryVariant = sky_blue, //light_gray,
     onPrimary = Color.White,
-    secondary = sea_blue, //medium_gray,
+    secondary = sky_blue, //medium_gray,
     secondaryVariant = sky_blue, //dark_gray,
     onSecondary = Color.White,
     error = Red800
@@ -153,10 +153,10 @@ private val LightColors = lightColors(
 
 private val DarkColors = darkColors(
     primary = sky_blue,
-    primaryVariant = sea_blue, //dark_gray,
+    primaryVariant = sky_blue, //dark_gray,
     onPrimary = Color.Black,
     secondary = sky_blue, // medium_gray,
-    secondaryVariant = sea_blue, //light_gray,
+    secondaryVariant = sky_blue, //light_gray,
     onSecondary = Color.Black,
     error = Red200,
 )

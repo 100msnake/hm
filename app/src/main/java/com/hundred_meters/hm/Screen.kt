@@ -1,6 +1,7 @@
 package com.hundred_meters.hm
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,7 @@ fun Screen(
 
     val screenContext = LocalContext.current
     val mainActivity = MainActivity()
+    val sky_blue = Color(0xff00B5E2)
 
 
 
@@ -76,6 +78,7 @@ fun Screen(
                     } // Row
                 }, // title
 
+                // backgroundColor = sky_blue,
                 backgroundColor = Color.Black,
                 contentColor = Color.White,
 

@@ -38,6 +38,8 @@ class MainActivity : ComponentActivity() {
 
     private var broadcastBlahs: Array<Blah> = arrayOf()
 
+    private var debugging = true
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,7 +55,7 @@ class MainActivity : ComponentActivity() {
         }
 
         // --------------------------------------------------------------------------------
-        // ------- observe data in viewModel ------- start --------------------------------
+        // ------- observe data in viewModel ----------------------------------------------
         // --------------------------------------------------------------------------------
 
 
@@ -149,6 +151,9 @@ class MainActivity : ComponentActivity() {
         message: Blah = safetyBlah,
         priority: Int = NotificationCompat.PRIORITY_LOW,
     ) {
+
+        // TODO showNotification() looks really confused. UPDATE this bro. WTF.
+
         if (blahOK(message) && priorityOK(priority)) {
 
             val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
@@ -160,7 +165,7 @@ class MainActivity : ComponentActivity() {
             val group = mainViewModel.stateBlah.topic
 
             createNotificationChannel(
-                blah = mainViewModel.stateBlah,
+                blah = message, //mainViewModel.stateBlah,
                 importance1to5 = importance
             )
 
@@ -204,6 +209,14 @@ class MainActivity : ComponentActivity() {
         toast.show()
     }
 
+    private fun debugBlah(aString : String){
+
+        //val bugBlah = Blah( topic = "DEBUG MESSAGE", body = aString, randomNumberID = 123)
+        //showNotification(bugBlah)
+
+        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        mainViewModel.newBlah(newTopic = "DEBUGGING MESSAGE", newBody = aString)
+    }
 
     private fun blahOK(blah: Blah): Boolean {
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
@@ -295,7 +308,7 @@ class MainActivity : ComponentActivity() {
 
             action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
             putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            // TODO you can improve this by adding channel name here, but i kept making mistakes and gave up
+            // TODO you can improve this by adding the specific channel, but i kept making mistakes and gave up
             //  info https://developer.android.com/training/notify-user/channels
         }
         context.startActivity(intent)
@@ -325,7 +338,6 @@ class MainActivity : ComponentActivity() {
     private val STRATEGY = Strategy.P2P_CLUSTER
 
     private fun startAdvertising() {
-
 
         val advertisingOptions: AdvertisingOptions =
             AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
@@ -365,13 +377,14 @@ class MainActivity : ComponentActivity() {
                     .requestConnection(labelToAdvertise, endpointId, connectionLifecycleCallback)
                     .addOnSuccessListener { unused: Void? -> }
                     .addOnFailureListener { e: java.lang.Exception? -> Log.d(TAG, "error: $e") }
-
+                if (debugging){debugBlah("found... $endpointId")}
 
             }
 
             override fun onEndpointLost(endpointId: String) {
                 // A previously discovered endpoint has gone away.
                 Log.d(TAG, "\nlost... $endpointId")
+                if (debugging){debugBlah("lost... $endpointId")}
 
             }
         }
@@ -392,6 +405,8 @@ class MainActivity : ComponentActivity() {
                         val toEndPoint: String = endpointId
 
                         Log.d(TAG, "\nsending data to...$toEndPoint")
+                        if (debugging){debugBlah("sending data to...$toEndPoint")}
+
 
                         sendIt(toEndPoint)
                     }
@@ -405,7 +420,7 @@ class MainActivity : ComponentActivity() {
                 // We've been disconnected from this endpoint. No more data can be
                 // sent or received.
                 Log.d(TAG, "\nsuddenly disconnected from... $endpointId")
-
+                if (debugging){debugBlah("suddenly disconnected from... $endpointId")}
             }
         }
 
@@ -431,8 +446,10 @@ class MainActivity : ComponentActivity() {
         val bytesPayLoad = Payload.fromBytes(serialise(broadcastBlahs))
         Nearby.getConnectionsClient(context).sendPayload(toEndpointId, bytesPayLoad)
 
+            if (debugging){debugBlah("sending to: $toEndpointId \n\n$bytesPayLoad")}
+
         // mf delete when complete? probably
-        // toastShort(getString(R.string.sending))
+        toastLong(getString(R.string.sending))
 
 
     }
@@ -447,8 +464,10 @@ class MainActivity : ComponentActivity() {
 
                     //mf
                     val messageReceived = unSerialise(payload.asBytes())
-                    ifTestMessage(messageReceived, endpointId)
                     showFoundNotifications(messageReceived)
+
+                    if (debugging){debugBlah("recieved from : $endpointId \n\n$messageReceived")}
+
 
                 }
             }
@@ -516,55 +535,6 @@ class MainActivity : ComponentActivity() {
 // --------------------------------------------------------------------------------
 
 
-// --------------------------------------------------------------------------------
-// TEST MESSAGE AND CREDITS
-// --------------------------------------------------------------------------------
-
-// get 100m to reply to messages in an informative way as a test.
-// these shouldn't expose any data about the anyone using the app
-// they should appear in the recipient's notifications, not on your own
-// suggestions:
-// topic: "100m_credits" will return a message with our names to prove we're not liars / idiots
-// topic: 100m_test will return a report for diagnosis
-// so, in the MainActivity is:
-// ifTestMessage(messageReceived, endpointId)
-
-    fun ifTestMessage(blahs : Array<Blah>, sender : String) {
-
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        val creditWords = arrayOf("100m_credits", "credits_100m", "100m credits", "credits 100m")
-        val testWords = arrayOf("100m_test", "test_100m", "100m test", "test 100m")
-
-        for (blah in blahs)
-
-            if (blah.topic.lowercase() in creditWords) {
-                val creditBlah = Blah(
-                    topic = getString(R.string.credits_topic),
-                    body = getString(R.string.credits)+ "\n\n" + getString(R.string.explain_credits),
-                    randomNumber()
-                )
-                mainViewModel.newMessageForNotification.value = creditBlah
-                if (blah.randomNumberID > 0) {
-                    mainViewModel.deleteBlah(blah.randomNumberID)
-                }
-            }
-
-            else if (blah.topic.lowercase() in testWords) {
-                val testBlah = Blah(
-                    topic = getString(R.string.test),
-                    body = "Sender: $sender\nBlah: \n${blah}" + "\n\n" + getString(R.string.explain_test),
-                    randomNumber()
-                )
-                mainViewModel.newMessageForNotification.value = testBlah
-                if (blah.randomNumberID > 0) {
-                    mainViewModel.deleteBlah(blah.randomNumberID)
-                }
-            }
-    }
-
-// --------------------------------------------------------------------------------
-// TEST MESSAGE AND CREDITS END
-// --------------------------------------------------------------------------------
 
 //------------------------------------
 
