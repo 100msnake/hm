@@ -100,7 +100,7 @@ class MainViewModel : ViewModel() {
     }
 
 
-    fun deleteBlah(IDToDelete: Int) {
+    fun deleteBlah(IDToDelete: Int = randomNumber()) {
 
         if ( singleSourceOfUserBlahs.isEmpty()){ return }
 
@@ -202,16 +202,17 @@ class MainViewModel : ViewModel() {
 
     fun keepBlah(checkThisTopic: String): Boolean {
 
-        if (!checkThisTopic.startsWith("#")) {
+        if (!checkThisTopic.startsWith("#"))
+        {
             return true
         }
 
         // only display found messages with #topic already used by user. thus, privacy for sender.
-        if (listOfUsersTopics.contains(checkThisTopic)) {
+        if (listOfUsersTopics.contains(checkThisTopic))
+        {
             return true
         }
 
-        Log.d(TAG, "topic rejected: $checkThisTopic")
         return false
     }
 
@@ -227,6 +228,7 @@ class MainViewModel : ViewModel() {
         }
         return blah.body
     }
+
 
 
 

@@ -215,8 +215,10 @@ class MainActivity : ComponentActivity() {
         //showNotification(bugBlah)
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        mainViewModel.newBlah(newTopic = "DEBUGGING MESSAGE", newBody = aString)
+        mainViewModel.newBlah(newTopic = "DEBUGGING MESSAGE", newBody = aString )
     }
+
+
 
     private fun blahOK(blah: Blah): Boolean {
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
@@ -466,7 +468,13 @@ class MainActivity : ComponentActivity() {
                     val messageReceived = unSerialise(payload.asBytes())
                     showFoundNotifications(messageReceived)
 
-                    if (debugging){debugBlah("recieved from : $endpointId \n\n$messageReceived")}
+                    var turnedToText = ""
+
+                    for (b in messageReceived){
+                        turnedToText += b.topic + "\n" + b.body + "\n" + b.randomNumberID.toString() + "\n\n"
+                    }
+
+                    if (debugging){debugBlah("received from : $endpointId \n\n$turnedToText")}
 
 
                 }
