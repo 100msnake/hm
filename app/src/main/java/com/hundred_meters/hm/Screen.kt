@@ -27,7 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @Composable
 fun Screen(
     modifier: Modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-    //modifier: Modifier = Modifier,
     mainViewModel: MainViewModel = viewModel(),
 ) {
 

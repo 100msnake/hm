@@ -57,20 +57,27 @@ class MainActivity : ComponentActivity() {
         // --------------------------------------------------------------------------------
         // ------- observe data in viewModel ----------------------------------------------
         // --------------------------------------------------------------------------------
-
+        // note: to show notifications you need to send the blah to MainViewModel first.
+        // it should be done that way, i think, to allow for lifecycle changes.
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
         val newMessageObserver = Observer<Blah> { newMessageByUser ->
             showNotification(message = newMessageByUser)
+            debugTheShitOutOfThis()
         }
 
-        val singleSourceOfTruthObserver = Observer<MutableSet<Blah>> { singleSourceOfTruth ->
-            broadcastBlahs = singleSourceOfTruth.toTypedArray()
-        }
+
+        //val singleSourceOfTruthObserver = Observer<MutableSet<Blah>> { singleSourceOfTruth ->
+            // broadcastBlahs = singleSourceOfTruth.toTypedArray()
+            //Log.d(TAG, "NOW? " + singleSourceOfTruth)
+
+        //}
 
         mainViewModel.newMessageForNotification.observe(this, newMessageObserver)
-        mainViewModel.singleSourceOfTruth.observe(this, singleSourceOfTruthObserver)
+            // mf mainViewModel.singleSourceOfTruth.observe(this, singleSourceOfTruthObserver)
+        // mainViewModel.singleSourceOfTruth.observe(this, singleSourceOfTruthObserver)
+
 
 
         // --------------------------------------------------------------------------------
@@ -100,8 +107,28 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    // ------------------------------------------------------------------------
+    // debug
+    // ------------------------------------------------------------------------
 
-// ------------------------------------------------------------------------
+    fun debugTheShitOutOfThis(){
+        if(!debugging){return}
+        Log.d(TAG, "debugging is on. to turn it off in MainActivity change:\nprivate var debugging = true\n\n")
+
+
+        // mf  (broadcastBlahs.isEmpty()){ Log.d(TAG, "broadcastBlahs empty, bro")}
+
+// TODO where is the data? go through the wole process of broadcastBlahs and get it working
+        // mf for (b in broadcastBlahs) {
+        // mf     Log.d(TAG, b.toString())
+        // mf }
+
+        }
+
+
+
+
+    // ------------------------------------------------------------------------
     // NOTIFICATION
     // ------------------------------------------------------------------------
 
@@ -207,15 +234,6 @@ class MainActivity : ComponentActivity() {
         val duration = Toast.LENGTH_LONG
         val toast = Toast.makeText(context, words, duration)
         toast.show()
-    }
-
-    private fun debugBlah(aString : String){
-
-        //val bugBlah = Blah( topic = "DEBUG MESSAGE", body = aString, randomNumberID = 123)
-        //showNotification(bugBlah)
-
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        mainViewModel.newBlah(newTopic = "DEBUGGING MESSAGE", newBody = aString )
     }
 
 
@@ -379,14 +397,14 @@ class MainActivity : ComponentActivity() {
                     .requestConnection(labelToAdvertise, endpointId, connectionLifecycleCallback)
                     .addOnSuccessListener { unused: Void? -> }
                     .addOnFailureListener { e: java.lang.Exception? -> Log.d(TAG, "error: $e") }
-                if (debugging){debugBlah("found... $endpointId")}
+                if (debugging){Log.d(TAG, "found... $endpointId")}
 
             }
 
             override fun onEndpointLost(endpointId: String) {
                 // A previously discovered endpoint has gone away.
                 Log.d(TAG, "\nlost... $endpointId")
-                if (debugging){debugBlah("lost... $endpointId")}
+                if (debugging){Log.d(TAG, "lost... $endpointId")}
 
             }
         }
@@ -407,7 +425,7 @@ class MainActivity : ComponentActivity() {
                         val toEndPoint: String = endpointId
 
                         Log.d(TAG, "\nsending data to...$toEndPoint")
-                        if (debugging){debugBlah("sending data to...$toEndPoint")}
+                        if (debugging){Log.d(TAG, "sending data to...$toEndPoint")}
 
 
                         sendIt(toEndPoint)
@@ -422,7 +440,7 @@ class MainActivity : ComponentActivity() {
                 // We've been disconnected from this endpoint. No more data can be
                 // sent or received.
                 Log.d(TAG, "\nsuddenly disconnected from... $endpointId")
-                if (debugging){debugBlah("suddenly disconnected from... $endpointId")}
+                if (debugging){Log.d(TAG, "suddenly disconnected from... $endpointId")}
             }
         }
 
@@ -444,11 +462,17 @@ class MainActivity : ComponentActivity() {
 
         // mf just for testing
 
+        // TODO just removed singleSourceOfTruth because it didnt hold anything
+        //  replaced it with mainViewModl.blahList but this is supposed to be passed via liveData
+        // to take proper advantage of viewModel. Does it even work? FFS this is stupidly complicated.
 
-        val bytesPayLoad = Payload.fromBytes(serialise(broadcastBlahs))
+        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
+        // mf val bytesPayLoad = Payload.fromBytes(serialise(broadcastBlahs))
+        val bytesPayLoad = Payload.fromBytes(serialise(mainViewModel.blahList.toTypedArray()))
         Nearby.getConnectionsClient(context).sendPayload(toEndpointId, bytesPayLoad)
 
-            if (debugging){debugBlah("sending to: $toEndpointId \n\n$bytesPayLoad")}
+            if (debugging){Log.d(TAG, "sending to: $toEndpointId \n\n$bytesPayLoad")}
 
         // mf delete when complete? probably
         toastLong(getString(R.string.sending))
@@ -474,7 +498,7 @@ class MainActivity : ComponentActivity() {
                         turnedToText += b.topic + "\n" + b.body + "\n" + b.randomNumberID.toString() + "\n\n"
                     }
 
-                    if (debugging){debugBlah("received from : $endpointId \n\n$turnedToText")}
+                    if (debugging){Log.d(TAG, "received from : $endpointId \n\n$turnedToText")}
 
 
                 }

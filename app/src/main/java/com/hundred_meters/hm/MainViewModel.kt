@@ -1,10 +1,7 @@
 package com.hundred_meters.hm
 
 import android.util.Log
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.*
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
@@ -20,14 +17,12 @@ class MainViewModel : ViewModel() {
 
     private var listOfUsersTopics = mutableListOf<String>()
 
-
     // -------------------------------------------------------------------
-    // data for Main Activity via livedata -------------------------------
+    // public data exchanged from here     -------------------------------
     // -------------------------------------------------------------------
 
-    private var singleSourceOfUserBlahs: MutableSet<Blah> = mutableSetOf()
+    private val _blahList = mutableStateListOf<Blah>()
 
-    private val _blahList = singleSourceOfUserBlahs.toMutableStateList()
     val blahList: List<Blah>
         get() = _blahList
 
@@ -35,16 +30,13 @@ class MainViewModel : ViewModel() {
         MutableLiveData<Blah>()
     }
 
-    val singleSourceOfTruth: MutableLiveData<MutableSet<Blah>> by lazy {
-        MutableLiveData<MutableSet<Blah>>()
-    }
 
     // -------------------------------------------------------------------
-    // data for Main Activity via livedata -------- end ------------------
+    // public data exchanged from here  end  -----------------------------
     // -------------------------------------------------------------------
 
     // -------------------------------------------------------------------
-    // data for UI Compose via observing start  --------------------------
+    // data for UI Compose via observing ------- start  ------------------
     // -------------------------------------------------------------------
 
     // stateBlah is the data in the ui - what the user sees it the topic and message text boxes
@@ -64,7 +56,7 @@ class MainViewModel : ViewModel() {
     }
 
     // -------------------------------------------------------------------
-    // data for UI Compose via observing end --------------------------
+    // data for UI Compose via observing -------end ----------------------
     // -------------------------------------------------------------------
 
 
@@ -91,10 +83,8 @@ class MainViewModel : ViewModel() {
             randomNumberID = randomNumber()
         )
 
-        singleSourceOfUserBlahs.add(blah)
         _blahList.add(blah)
         newMessageForNotification.value = blah
-        singleSourceOfTruth.value?.add(blah)
         listOfUsersTopics.add(newTopic)
 
     }
@@ -102,22 +92,14 @@ class MainViewModel : ViewModel() {
 
     fun deleteBlah(IDToDelete: Int = randomNumber()) {
 
-        if ( singleSourceOfUserBlahs.isEmpty()){ return }
+        if ( _blahList.isEmpty()){ return }
 
-        for (b in singleSourceOfUserBlahs) {
+        for (b in _blahList) {
             if (b.randomNumberID == IDToDelete)
             {
-                if (singleSourceOfUserBlahs.contains(b))
-                {
-                    singleSourceOfUserBlahs.remove(b)
-                }
                 if (_blahList.contains(b))
                 {
                     _blahList.remove(b)
-                }
-                if (singleSourceOfTruth.value?.contains(b) == true)
-                {
-                    singleSourceOfTruth.value?.remove(b)
                 }
 
             }
@@ -130,7 +112,6 @@ class MainViewModel : ViewModel() {
 
         setTopicSwitch()
         topicSpacesToUnderScores()
-
     }
 
     private fun topicSpacesToUnderScores() {
@@ -230,18 +211,5 @@ class MainViewModel : ViewModel() {
     }
 
 
-
-
-
 }
-
-
-// TODO i tried to have a single source of truth for user Blahs, but different types were needed
-//  for compose state and livedata and they didn't convert.
-//  still, there be a proper single source of truth
-
-
-// TODO currently the notification channel is not deleted when the last blah using that topic is deleted.
-//  Maybe not necessary, but i thought i would mention it. MF
-
 
