@@ -18,6 +18,11 @@
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- i did not want ad_id permission. google refused to accept that i had it once but removed it. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <!-- i did not want ad_id permission. google refused to accept that i had it once but removed it. -->
+
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

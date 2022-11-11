@@ -21,9 +21,14 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.google.android.gms.nearby.connection.DiscoveryOptions
+import java.lang.Exception
+import kotlin.text.Charsets.UTF_8
 
 
 const val TAG = "mfmf"
@@ -32,13 +37,79 @@ const val TAG = "mfmf"
 class MainActivity : ComponentActivity() {
 
     val context: Context = this
-
-    // name the encryption you use in case encryption changes
-    private val encryptionName: String = "100m00"
-
-    private var broadcastBlahs: Array<Blah> = arrayOf()
-
     private var debugging = true
+
+// =================================================================================
+// NEARBY CONNECTIONS 2 start
+// =================================================================================
+
+    var messageReceived : String = ""
+    /** callback for receiving payloads */
+    private val payloadCallback: PayloadCallback = object : PayloadCallback() {
+        override fun onPayloadReceived(endpointId: String, payload: Payload) {
+            payload.asBytes()?.let {
+                messageReceived = String(it, UTF_8)
+                //Log.d(TAG, "RECEIVED: " + String(it, UTF_8))
+                if (debugging){
+                    var blah = Blah(topic = "test", body = messageReceived, randomNumberID = 0)
+                    showNotification(blah,priority = NotificationCompat.PRIORITY_MAX )
+                }
+            }
+        }
+
+        override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
+
+            if (update.status == PayloadTransferUpdate.Status.SUCCESS
+                && messageReceived != "") {
+                val oc = messageReceived!!
+                Log.d(TAG, "oc: " + oc)
+                messageReceived = ""
+            }
+        }
+    }
+
+    // Callbacks for connections to other devices
+    private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
+        override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
+            // Accepting a connection means you want to receive messages. Hence, the API expects
+            // that you attach a PayloadCall to the acceptance
+            connectionsClient.acceptConnection(endpointId, payloadCallback)
+            Log.d(TAG,"endpointName\n(${info.endpointName})")
+        }
+
+        override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
+            if (result.status.isSuccess) {
+                //connectionsClient.stopAdvertising()
+                //connectionsClient.stopDiscovery()
+                opponentEndpointId = endpointId
+                //binding.opponentName.text = opponentName
+                Log.d(TAG,"Connected")
+                //setGameControllerEnabled(true) // we can start playing
+                sendGameChoice("from another machine")
+            }
+        }
+
+        override fun onDisconnected(endpointId: String) {
+            //resetGame()
+            Log.d(TAG, "disconnected")
+        }
+    }
+
+    // Callbacks for finding other devices
+    private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
+        override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            connectionsClient.requestConnection("myCodeName", endpointId, connectionLifecycleCallback)
+        }
+
+        override fun onEndpointLost(endpointId: String) {
+        }
+    }
+
+
+
+// =================================================================================
+// NEARBY CONNECTIONS 2 end
+// =================================================================================
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,21 +135,9 @@ class MainActivity : ComponentActivity() {
 
         val newMessageObserver = Observer<Blah> { newMessageByUser ->
             showNotification(message = newMessageByUser)
-            debugTheShitOutOfThis()
         }
 
-
-        //val singleSourceOfTruthObserver = Observer<MutableSet<Blah>> { singleSourceOfTruth ->
-            // broadcastBlahs = singleSourceOfTruth.toTypedArray()
-            //Log.d(TAG, "NOW? " + singleSourceOfTruth)
-
-        //}
-
         mainViewModel.newMessageForNotification.observe(this, newMessageObserver)
-            // mf mainViewModel.singleSourceOfTruth.observe(this, singleSourceOfTruthObserver)
-        // mainViewModel.singleSourceOfTruth.observe(this, singleSourceOfTruthObserver)
-
-
 
         // --------------------------------------------------------------------------------
         // ------- observe data in viewModel ------- end ----------------------------------
@@ -101,33 +160,31 @@ class MainActivity : ComponentActivity() {
         // ask user for location permission on launch
         checkForPermission()
 
+        // ------------------------------------------------
+        // nearby connections 2
+        connectionsClient = Nearby.getConnectionsClient(this)
+
+        // ------------------------------------------------
+
+        // nearby connections 1 and 2--------------------------------------
         // start nearby connect
         startAdvertising()
         startDiscovery()
+        // nearby connections 1 and 2--------------------------------------
 
+        debug()
     }
 
     // ------------------------------------------------------------------------
     // debug
     // ------------------------------------------------------------------------
 
-    fun debugTheShitOutOfThis(){
-        if(!debugging){return}
-        Log.d(TAG, "debugging is on. to turn it off in MainActivity change:\nprivate var debugging = true\n\n")
-
-
-        // mf  (broadcastBlahs.isEmpty()){ Log.d(TAG, "broadcastBlahs empty, bro")}
-
-// TODO where is the data? go through the wole process of broadcastBlahs and get it working
-        // mf for (b in broadcastBlahs) {
-        // mf     Log.d(TAG, b.toString())
-        // mf }
-
+    fun debug() {
+        if (debugging) {
+            Log.d(TAG, "debugging on: private var debugging = true\n")
         }
 
-
-
-
+    }
     // ------------------------------------------------------------------------
     // NOTIFICATION
     // ------------------------------------------------------------------------
@@ -158,20 +215,14 @@ class MainActivity : ComponentActivity() {
 
 
     fun showFoundNotifications(blahArray: Array<Blah>) {
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-
-        for (item in blahArray) {
-            if (mainViewModel.keepBlah(item.topic)) {
-                //showNotification(message = item)
-                mainViewModel.newMessageForNotification.value = item
-                // TODO should all  notifications go through mainViewModel? NOT straight to showNotification?
-                // TODO send to mainViewModel as an array, or individual blahs?
+        if (debugging) {
+            for (m in blahArray) {
+                toastLong("notification: \n" + m.toString())
             }
         }
+        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        mainViewModel.showNotificationArray(blahArray)
     }
-
-    // TODO check over notification builder details. There must be cool things you missed
-    // https://developer.android.com/reference/android/app/Notification.Builder
 
 
     private fun showNotification(
@@ -179,21 +230,26 @@ class MainActivity : ComponentActivity() {
         priority: Int = NotificationCompat.PRIORITY_LOW,
     ) {
 
-        // TODO showNotification() looks really confused. UPDATE this bro. WTF.
+        // showNotification() should be called via mainViewModel for some lifecycle awareness (i assume)
+        // mainViewModel changes the value of newMessageForNotification which is an observed variable
 
-        if (blahOK(message) && priorityOK(priority)) {
+        if (blahOK(message)) {
 
-            val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+            // is stateBlah correct here? should it be message
+            //val CHANNEL_ID = mainViewModel.stateBlah.topic
+            val CHANNEL_ID = message.topic
 
-            val CHANNEL_ID = mainViewModel.stateBlah.topic
 
-            val importance = NotificationManager.IMPORTANCE_LOW
+            // is stateBlah correct here? should it be message
+            //val group = mainViewModel.stateBlah.topic
+            // maybe "100m"
+            val group = message.topic
 
-            val group = mainViewModel.stateBlah.topic
-
+            // low importance for defult notification channel.
+            // descretion seems the right choice. user can upgrade channel if they want
             createNotificationChannel(
                 blah = message, //mainViewModel.stateBlah,
-                importance1to5 = importance
+                importance1to5 = NotificationManager.IMPORTANCE_LOW
             )
 
             // content of notification
@@ -219,23 +275,8 @@ class MainActivity : ComponentActivity() {
                 // notificationId is a unique int for each notification that you must define
                 notify(message.randomNumberID, builder.build())
             }
-        } //
-        // TODO notification_id is the numberID of the Blah, so we can identify the Blah for pending intent?
+        }
     }
-
-
-    private fun toastShort(words: String) {
-        val duration = Toast.LENGTH_SHORT
-        val toast = Toast.makeText(context, words, duration)
-        toast.show()
-    }
-
-    private fun toastLong(words: String) {
-        val duration = Toast.LENGTH_LONG
-        val toast = Toast.makeText(context, words, duration)
-        toast.show()
-    }
-
 
 
     private fun blahOK(blah: Blah): Boolean {
@@ -248,54 +289,8 @@ class MainActivity : ComponentActivity() {
             toastLong(getString(R.string.topic_needed))
             return false
         }
-
         return true
     }
-
-
-    fun importanceOK(importance: Int): Boolean {
-
-        if (importance == 1) { // MIN
-            return true
-        }
-        if (importance == 2) { // LOW
-            return true
-        }
-        if (importance == 3) {
-            return true
-        }
-        if (importance == 4) {
-            return true
-        }
-        if (importance == 5) { // MAX
-            return true
-        }
-
-        return false
-    }
-
-
-    private fun priorityOK(priority: Int): Boolean {
-
-        if (priority == -2) { // MIN
-            return true
-        }
-        if (priority == -1) { // LOW
-            return true
-        }
-        if (priority == 0) {
-            return true
-        }
-        if (priority == 1) {
-            return true
-        }
-        if (priority == 2) { // MAX
-            return true
-        }
-
-        return false
-    }
-
 
 
     private fun createNotificationChannel(
@@ -322,7 +317,6 @@ class MainActivity : ComponentActivity() {
     }
 
 
-
     fun openAppNotificationSettings(context: Context) {
         val intent = Intent().apply {
 
@@ -334,6 +328,25 @@ class MainActivity : ComponentActivity() {
         context.startActivity(intent)
     }
 
+//----------------------------------------------------------
+// toast
+//----------------------------------------------------------
+
+    private fun toastShort(words: String) {
+        val duration = Toast.LENGTH_SHORT
+        val toast = Toast.makeText(context, words, duration)
+        toast.show()
+    }
+
+    private fun toastLong(words: String) {
+        val duration = Toast.LENGTH_LONG
+        val toast = Toast.makeText(context, words, duration)
+        toast.show()
+    }
+
+//----------------------------------------------------------
+// toast end
+//----------------------------------------------------------
 
 // =======================================================================
 
@@ -341,6 +354,43 @@ class MainActivity : ComponentActivity() {
 // NOTIFICATION ends
 // ------------------------------------------------------------------------
 
+// =================================================================================
+// NEARBY CONNECTIONS 2 start
+// =================================================================================
+    private val STRATEGY = Strategy.P2P_CLUSTER
+
+    private lateinit var connectionsClient: ConnectionsClient
+
+    private var opponentEndpointId: String? = null
+
+    //private lateinit var binding: ActivityMainBinding
+
+    private fun sendGameChoice(messageToSend: String = "test mf") {
+        connectionsClient.sendPayload(
+            opponentEndpointId!!,
+            Payload.fromBytes(messageToSend.toByteArray(UTF_8))
+        )
+    }
+
+
+    private fun startAdvertising() {
+        val options = AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
+        // Note: Advertising may fail. To keep this demo simple, we don't handle failures.
+        connectionsClient.startAdvertising(
+            "myCodeName", // myCodeName
+            packageName,
+            connectionLifecycleCallback,
+            options
+        )
+        //if (debugging){toastShort("advertising")}
+    }
+
+
+
+// =================================================================================
+// NEARBY CONNECTIONS 2 end
+// =================================================================================
+/*
 // =================================================================================
 // NEARBY CONNECTIONS
 // =================================================================================
@@ -353,6 +403,8 @@ class MainActivity : ComponentActivity() {
 // Nearby Connections - Advertising and discovery
 // ---------------------------------------------------------------------------------
 
+
+    //-----------------------------------------------------------------------------------
 
     private val SERVICE_ID: String = "100m"
     private val STRATEGY = Strategy.P2P_CLUSTER
@@ -367,9 +419,13 @@ class MainActivity : ComponentActivity() {
             )
             .addOnSuccessListener { unused: Void? -> }
             .addOnFailureListener { e: Exception? -> }
+        if (debugging) {
+            toastLong("advertising")
+        }
 
     }
 
+// --------------------------------------------------------------------------------
 
     private fun startDiscovery() {
 
@@ -378,6 +434,9 @@ class MainActivity : ComponentActivity() {
             .startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
             .addOnSuccessListener { unused: Void? -> }
             .addOnFailureListener { e: java.lang.Exception? -> }
+        if (debugging) {
+            toastShort("discovering")
+        }
 
     }
 
@@ -397,15 +456,17 @@ class MainActivity : ComponentActivity() {
                     .requestConnection(labelToAdvertise, endpointId, connectionLifecycleCallback)
                     .addOnSuccessListener { unused: Void? -> }
                     .addOnFailureListener { e: java.lang.Exception? -> Log.d(TAG, "error: $e") }
-                if (debugging){Log.d(TAG, "found... $endpointId")}
+                if (debugging) {
+                    toastLong("found... $endpointId")
+                }
 
             }
 
             override fun onEndpointLost(endpointId: String) {
                 // A previously discovered endpoint has gone away.
-                Log.d(TAG, "\nlost... $endpointId")
-                if (debugging){Log.d(TAG, "lost... $endpointId")}
-
+                if (debugging) {
+                    toastLong("\nlost... $endpointId")
+                }
             }
         }
 
@@ -424,9 +485,9 @@ class MainActivity : ComponentActivity() {
 
                         val toEndPoint: String = endpointId
 
-                        Log.d(TAG, "\nsending data to...$toEndPoint")
-                        if (debugging){Log.d(TAG, "sending data to...$toEndPoint")}
-
+                        if (debugging) {
+                            toastLong("sending data to...$toEndPoint")
+                        }
 
                         sendIt(toEndPoint)
                     }
@@ -437,10 +498,9 @@ class MainActivity : ComponentActivity() {
             }
 
             override fun onDisconnected(endpointId: String) {
-                // We've been disconnected from this endpoint. No more data can be
-                // sent or received.
-                Log.d(TAG, "\nsuddenly disconnected from... $endpointId")
-                if (debugging){Log.d(TAG, "suddenly disconnected from... $endpointId")}
+                if (debugging) {
+                    toastLong("suddenly disconnected from... $endpointId")
+                }
             }
         }
 
@@ -451,32 +511,24 @@ class MainActivity : ComponentActivity() {
 
 
     fun sendIt(toEndpointId: String) {
-        //val bytesPayload = Payload.fromBytes(byteArrayOf(0xa, 0xb, 0xc, 0xd))
-        // mf
-        //val crypt = Crypt()
 
-        // TODO what is the payload. should be self from blahs
-        //val bytesPayload = Payload.fromBytes(serialiseToSend(selfBlahs))
-
-        //val bytesPayload = Payload.fromBytes(serializeToSend(mutableListOf(mm, mm2)))
-
-        // mf just for testing
-
-        // TODO just removed singleSourceOfTruth because it didnt hold anything
-        //  replaced it with mainViewModl.blahList but this is supposed to be passed via liveData
-        // to take proper advantage of viewModel. Does it even work? FFS this is stupidly complicated.
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        // mf val bytesPayLoad = Payload.fromBytes(serialise(broadcastBlahs))
-        val bytesPayLoad = Payload.fromBytes(serialise(mainViewModel.blahList.toTypedArray()))
+        val payloadContents = mainViewModel.blahList.toTypedArray()
+        val payloadSerialised = serialise(payloadContents)
+        val bytesPayLoad = Payload.fromBytes(payloadSerialised)
         Nearby.getConnectionsClient(context).sendPayload(toEndpointId, bytesPayLoad)
 
-            if (debugging){Log.d(TAG, "sending to: $toEndpointId \n\n$bytesPayLoad")}
-
-        // mf delete when complete? probably
+        // debatable to include "sending" or not
         toastLong(getString(R.string.sending))
 
+        if (debugging) {
+            val unserialised = unSerialise(bytesPayLoad.asBytes())
+            for (m in unserialised) {
+                toastLong("sent and userialised: \n" + m.toString())
+            }
+        }
 
     }
 
@@ -492,14 +544,11 @@ class MainActivity : ComponentActivity() {
                     val messageReceived = unSerialise(payload.asBytes())
                     showFoundNotifications(messageReceived)
 
-                    var turnedToText = ""
-
-                    for (b in messageReceived){
-                        turnedToText += b.topic + "\n" + b.body + "\n" + b.randomNumberID.toString() + "\n\n"
+                    if (debugging) {
+                        for (m in messageReceived) {
+                            toastLong("received: \n" + m.toString())
+                        }
                     }
-
-                    if (debugging){Log.d(TAG, "received from : $endpointId \n\n$turnedToText")}
-
 
                 }
             }
@@ -530,7 +579,7 @@ class MainActivity : ComponentActivity() {
 // Disconnecting
 // ---------------------------------------------------------------------------------
 // Finally, disconnectFromEndpoint() disconnects from a particular remote endpoint, and stopAllEndpoints() disconnects from all connected endpoints. Remote endpoints are notified of disconnection via the ConnectionLifecycleCallback.onDisconnected().
-
+*/
 
 // ----------------------------------------------------------------------------------
 // serialize and encrypt
@@ -550,8 +599,7 @@ class MainActivity : ComponentActivity() {
 
     fun unSerialise(foundMessages: ByteArray?): Array<Blah> {
         if (foundMessages != null) {
-            if (foundMessages.isNotEmpty())
-            {
+            if (foundMessages.isNotEmpty()) {
                 val step3 = foundMessages.toString(Charsets.UTF_8)
                 val step4 = Json.decodeFromString<Array<Blah>>(step3)
                 return step4
@@ -561,22 +609,9 @@ class MainActivity : ComponentActivity() {
     }
 
 
-
 // --------------------------------------------------------------------------------
 // SERIALIZE and encrypt end
 // --------------------------------------------------------------------------------
-
-
-
-//------------------------------------
-
-    fun newLabel(): String {
-        val numberName = randomNumber().toString()
-        return "100m$encryptionName$numberName"
-    }
-// TODO sent package should have a name from newLabel() to include encryption type, surely
-
-//--------------------------------------
 
 
 // --------------------------------------------------------------
@@ -648,14 +683,22 @@ class MainActivity : ComponentActivity() {
 
     private fun checkForPermission() {
 
+        if (debugging) {
+            Log.d(TAG, "android version: " + Build.VERSION.SDK_INT.toString())
+        }
+
         for (thisPermission in getListOfPermissions()) {
 
             if (checkSelfPermission(thisPermission)
                 == PackageManager.PERMISSION_GRANTED
             ) {
-                Log.d(TAG, "\nok: $thisPermission")
+                if (debugging) {
+                    Log.d(TAG, "\nok: $thisPermission")
+                }
             } else {
-                Log.d(TAG, "\nrequested permission for $thisPermission")
+                if (debugging) {
+                    Log.d(TAG, "\nrequested permission for $thisPermission")
+                }
                 requestPermissionLauncher.launch(thisPermission)
 
             }
@@ -669,7 +712,9 @@ class MainActivity : ComponentActivity() {
         )
         { isGranted: Boolean ->
             if (isGranted) {
-                Log.d(TAG, "requestPermissionLauncher")
+                if (debugging) {
+                    Log.d(TAG, "requestPermissionLauncher")
+                }
             } else {
 
                 toastLong(getString(R.string.error_missing_permissions))
@@ -682,15 +727,19 @@ class MainActivity : ComponentActivity() {
 // permissions end
 //---------------------------------------------------------------
 
+
+
+    private fun startDiscovery(){
+        val options = DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
+        connectionsClient.startDiscovery(packageName,endpointDiscoveryCallback,options)
+        //if(debugging){toastLong("discovering")}
+    }
+
 } // end
 
 
 //---------------------------------
 
-// TODO link screen to messages. get it actually working
 
 
-// TODO when you press on a topic, the UI edits that topic
-// TODO check cut copy paste in textEdits
-// TODO keep list of topics used and delete found messages not matching
 

@@ -8,12 +8,14 @@ import androidx.lifecycle.ViewModel
 
 class MainViewModel : ViewModel() {
 
-
     var emptyBlah : Blah = Blah(
         topic = "",
         body = "",
         randomNumberID = 0
     )
+
+
+    var emptyBlahArray : Array<Blah> = arrayOf(emptyBlah, emptyBlah)
 
     private var listOfUsersTopics = mutableListOf<String>()
 
@@ -86,6 +88,13 @@ class MainViewModel : ViewModel() {
         _blahList.add(blah)
         newMessageForNotification.value = blah
         listOfUsersTopics.add(newTopic)
+    }
+
+    fun showNotificationArray(blahs : Array<Blah> = emptyBlahArray){
+        // TODO reinstate keepBlah
+        for (b in blahs){
+            newMessageForNotification.value = b
+        }
 
     }
 
@@ -209,6 +218,9 @@ class MainViewModel : ViewModel() {
         }
         return blah.body
     }
+
+
+
 
 
 }

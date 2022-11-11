@@ -11,8 +11,8 @@ android {
         applicationId "com.hundred_meters.hm"
         minSdk 26
         targetSdk 33
-        versionCode 16
-        versionName "1.15"
+        versionCode 22
+        versionName "1.22"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -104,8 +104,9 @@ dependencies {
 
 // ---------------------------------------------------
 
-    // cards - remove if you don't use cards
     implementation 'androidx.cardview:cardview:1.0.0'
+
+    implementation 'com.google.android.gms:play-services-location:21.0.0'
 
 
 
