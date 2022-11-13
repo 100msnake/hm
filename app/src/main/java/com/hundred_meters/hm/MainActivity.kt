@@ -21,13 +21,10 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.google.android.gms.nearby.connection.DiscoveryOptions
-import java.lang.Exception
 import kotlin.text.Charsets.UTF_8
 
 
@@ -42,27 +39,29 @@ class MainActivity : ComponentActivity() {
 // =================================================================================
 // NEARBY CONNECTIONS 2 start
 // =================================================================================
+    // nearby commections code adapted from:
+    // https://developer.android.com/codelabs/nearby-connections#3
 
     var messageReceived : String = ""
+
     /** callback for receiving payloads */
     private val payloadCallback: PayloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             payload.asBytes()?.let {
                 messageReceived = String(it, UTF_8)
-                //Log.d(TAG, "RECEIVED: " + String(it, UTF_8))
-                if (debugging){
-                    var blah = Blah(topic = "test", body = messageReceived, randomNumberID = 0)
-                    showNotification(blah,priority = NotificationCompat.PRIORITY_MAX )
-                }
+
             }
         }
 
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
 
             if (update.status == PayloadTransferUpdate.Status.SUCCESS
-                && messageReceived != "") {
+                && messageReceived.isNotEmpty()) {
                 val oc = messageReceived!!
-                Log.d(TAG, "oc: " + oc)
+
+                var decoded : String = decodeFromNearbyConnections(oc)
+                sendArrayOfBlahToNotifications(decoded)
+
                 messageReceived = ""
             }
         }
@@ -79,13 +78,17 @@ class MainActivity : ComponentActivity() {
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
             if (result.status.isSuccess) {
+
+
                 //connectionsClient.stopAdvertising()
                 //connectionsClient.stopDiscovery()
                 opponentEndpointId = endpointId
                 //binding.opponentName.text = opponentName
                 Log.d(TAG,"Connected")
                 //setGameControllerEnabled(true) // we can start playing
-                sendGameChoice("from another machine")
+                if (iGivePermissionToSendData()) {
+                    sendMessages(encodeForNearbyConnections())
+                }
             }
         }
 
@@ -214,16 +217,6 @@ class MainActivity : ComponentActivity() {
     )
 
 
-    fun showFoundNotifications(blahArray: Array<Blah>) {
-        if (debugging) {
-            for (m in blahArray) {
-                toastLong("notification: \n" + m.toString())
-            }
-        }
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        mainViewModel.showNotificationArray(blahArray)
-    }
-
 
     private fun showNotification(
         message: Blah = safetyBlah,
@@ -235,18 +228,10 @@ class MainActivity : ComponentActivity() {
 
         if (blahOK(message)) {
 
-            // is stateBlah correct here? should it be message
-            //val CHANNEL_ID = mainViewModel.stateBlah.topic
             val CHANNEL_ID = message.topic
 
-
-            // is stateBlah correct here? should it be message
-            //val group = mainViewModel.stateBlah.topic
-            // maybe "100m"
             val group = message.topic
 
-            // low importance for defult notification channel.
-            // descretion seems the right choice. user can upgrade channel if they want
             createNotificationChannel(
                 blah = message, //mainViewModel.stateBlah,
                 importance1to5 = NotificationManager.IMPORTANCE_LOW
@@ -365,7 +350,7 @@ class MainActivity : ComponentActivity() {
 
     //private lateinit var binding: ActivityMainBinding
 
-    private fun sendGameChoice(messageToSend: String = "test mf") {
+    private fun sendMessages(messageToSend: String = "test mf") {
         connectionsClient.sendPayload(
             opponentEndpointId!!,
             Payload.fromBytes(messageToSend.toByteArray(UTF_8))
@@ -582,13 +567,44 @@ class MainActivity : ComponentActivity() {
 */
 
 // ----------------------------------------------------------------------------------
-// serialize and encrypt
+// serialize and prepare data for Nearby Connections
 // ----------------------------------------------------------------------------------
 
-    // these messages exchanged between users should be encrypted.
-    // android best practices and good manners.
-    // unfortunately, all the encryption / decryption code i found and tried caused fatal errors.
-    // this needs to be done by a real programmer (not me). MF
+    // messages are automatically encrypted by nearby connections. MF
+    // there might be other reason for adding our own encryption, eg. imitators
+    // but that should wait until we see what th future brings
+
+    fun iGivePermissionToSendData(): Boolean{
+        // a conditional before sending data
+        // is there actually data to send?
+        // is there a reason to not send? you might add time conditions, for instance
+
+        return true
+    }
+
+    fun encodeForNearbyConnections(): String {
+        // probably get list<Blah > from viewModel
+        // and encode it via json
+        // to sent via nearby connections
+
+        return "from another machine"
+    }
+
+    fun decodeFromNearbyConnections( fromSender : String): String {
+        // probably unserialise the string using json
+        // turning it into a list<Blah>
+        return fromSender
+    }
+
+    fun sendArrayOfBlahToNotifications(fromSender: String){
+
+        if (debugging){
+            var blah = Blah(topic = "test", body = fromSender, randomNumberID = 0)
+            showNotification(blah,priority = NotificationCompat.PRIORITY_MAX )
+        }
+
+    }
+
 
     private fun serialise(messages: Array<Blah>): ByteArray {
         val step1 = Json.encodeToString(messages)
@@ -610,7 +626,7 @@ class MainActivity : ComponentActivity() {
 
 
 // --------------------------------------------------------------------------------
-// SERIALIZE and encrypt end
+// serialize and prepare data for Nearby Connections    END
 // --------------------------------------------------------------------------------
 
 
@@ -727,6 +743,9 @@ class MainActivity : ComponentActivity() {
 // permissions end
 //---------------------------------------------------------------
 
+//----------------------------------------------------------------
+// for nearby connections
+// ---------------------------------------------------------------
 
 
     private fun startDiscovery(){
@@ -735,7 +754,12 @@ class MainActivity : ComponentActivity() {
         //if(debugging){toastLong("discovering")}
     }
 
-} // end
+//----------------------------------------------------------------
+// for nearby connections end
+// ---------------------------------------------------------------
+
+} // end of mainActivity
+
 
 
 //---------------------------------

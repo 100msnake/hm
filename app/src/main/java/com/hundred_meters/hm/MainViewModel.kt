@@ -98,6 +98,9 @@ class MainViewModel : ViewModel() {
 
     }
 
+    fun useStringSentViaNearbyConnections(data : String){
+        Log.d(TAG, "from useStringSentViaNearbyConnections: " +  data)
+    }
 
     fun deleteBlah(IDToDelete: Int = randomNumber()) {
 
