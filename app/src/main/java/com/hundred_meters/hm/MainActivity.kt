@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
     private var debugging = true
 
 // =================================================================================
-// NEARBY CONNECTIONS 2 start
+// NEARBY CONNECTIONS start
 // =================================================================================
 
     var messageReceived : Array<Blah> = arrayOf()
@@ -110,7 +110,7 @@ class MainActivity : ComponentActivity() {
 
 
 // =================================================================================
-// NEARBY CONNECTIONS 2 end
+// NEARBY CONNECTIONS end
 // =================================================================================
 
 
@@ -354,7 +354,7 @@ class MainActivity : ComponentActivity() {
 // ------------------------------------------------------------------------
 
     // =================================================================================
-// NEARBY CONNECTIONS 2 start
+// NEARBY CONNECTIONS start
 // =================================================================================
     private val STRATEGY = Strategy.P2P_CLUSTER
 
@@ -400,198 +400,10 @@ class MainActivity : ComponentActivity() {
 
 
 // =================================================================================
-// NEARBY CONNECTIONS 2 end
-// =================================================================================
-/*
-// =================================================================================
-// NEARBY CONNECTIONS
+// NEARBY CONNECTIONS end
 // =================================================================================
 
-// https://developers.google.com/nearby/connections/android/discover-devices
-// https://developers.google.com/android/reference/com/google/android/gms/nearby/connection/ConnectionsClient#public-abstract-taskvoid-startadvertising
-// this is mostly code copied from the tutorial. i only wrote a few lines in
-// sendIt() and ReceiveBytesPayloadListener(). MF.
-// ---------------------------------------------------------------------------------
-// Nearby Connections - Advertising and discovery
-// ---------------------------------------------------------------------------------
 
-
-    //-----------------------------------------------------------------------------------
-
-    private val SERVICE_ID: String = "100m"
-    private val STRATEGY = Strategy.P2P_CLUSTER
-
-    private fun startAdvertising() {
-
-        val advertisingOptions: AdvertisingOptions =
-            AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
-        Nearby.getConnectionsClient(context)
-            .startAdvertising(
-                labelToAdvertise, SERVICE_ID, connectionLifecycleCallback, advertisingOptions
-            )
-            .addOnSuccessListener { unused: Void? -> }
-            .addOnFailureListener { e: Exception? -> }
-        if (debugging) {
-            toastLong("advertising")
-        }
-
-    }
-
-// --------------------------------------------------------------------------------
-
-    private fun startDiscovery() {
-
-        val discoveryOptions = DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
-        Nearby.getConnectionsClient(context)
-            .startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
-            .addOnSuccessListener { unused: Void? -> }
-            .addOnFailureListener { e: java.lang.Exception? -> }
-        if (debugging) {
-            toastShort("discovering")
-        }
-
-    }
-
-
-// ---------------------------------------------------------------------------------
-// Nearby Connections - Establishing connections
-// ---------------------------------------------------------------------------------
-
-
-    private val endpointDiscoveryCallback: EndpointDiscoveryCallback =
-        object : EndpointDiscoveryCallback() {
-
-            override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-
-                // An endpoint was found. We request a connection to it.
-                Nearby.getConnectionsClient(context)
-                    .requestConnection(labelToAdvertise, endpointId, connectionLifecycleCallback)
-                    .addOnSuccessListener { unused: Void? -> }
-                    .addOnFailureListener { e: java.lang.Exception? -> Log.d(TAG, "error: $e") }
-                if (debugging) {
-                    toastLong("found... $endpointId")
-                }
-
-            }
-
-            override fun onEndpointLost(endpointId: String) {
-                // A previously discovered endpoint has gone away.
-                if (debugging) {
-                    toastLong("\nlost... $endpointId")
-                }
-            }
-        }
-
-    private val connectionLifecycleCallback: ConnectionLifecycleCallback =
-        object : ConnectionLifecycleCallback() {
-            override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
-                // Automatically accept the connection on both sides.
-                Nearby.getConnectionsClient(context)
-                    .acceptConnection(endpointId, ReceiveBytesPayloadListener)
-
-            }
-
-            override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
-                when (result.status.statusCode) {
-                    ConnectionsStatusCodes.STATUS_OK -> {
-
-                        val toEndPoint: String = endpointId
-
-                        if (debugging) {
-                            toastLong("sending data to...$toEndPoint")
-                        }
-
-                        sendIt(toEndPoint)
-                    }
-                    ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {}
-                    ConnectionsStatusCodes.STATUS_ERROR -> {}
-                    else -> {}
-                }
-            }
-
-            override fun onDisconnected(endpointId: String) {
-                if (debugging) {
-                    toastLong("suddenly disconnected from... $endpointId")
-                }
-            }
-        }
-
-
-// ---------------------------------------------------------------------------------
-// Nearby Connections - Exchanging data
-// ---------------------------------------------------------------------------------
-
-
-    fun sendIt(toEndpointId: String) {
-
-
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-
-        val payloadContents = mainViewModel.blahList.toTypedArray()
-        val payloadSerialised = serialise(payloadContents)
-        val bytesPayLoad = Payload.fromBytes(payloadSerialised)
-        Nearby.getConnectionsClient(context).sendPayload(toEndpointId, bytesPayLoad)
-
-        // debatable to include "sending" or not
-        toastLong(getString(R.string.sending))
-
-        if (debugging) {
-            val unserialised = unSerialise(bytesPayLoad.asBytes())
-            for (m in unserialised) {
-                toastLong("sent and userialised: \n" + m.toString())
-            }
-        }
-
-    }
-
-
-    private val ReceiveBytesPayloadListener: PayloadCallback =
-        object : PayloadCallback() {
-            override fun onPayloadReceived(endpointId: String, payload: Payload) {
-                // This always gets the full data of the payload. Is null if it's not a BYTES payload.
-                if (payload.type == Payload.Type.BYTES) {
-                    // val receivedBytes = payload.asBytes()
-
-                    //mf
-                    val messageReceived = unSerialise(payload.asBytes())
-                    showFoundNotifications(messageReceived)
-
-                    if (debugging) {
-                        for (m in messageReceived) {
-                            toastLong("received: \n" + m.toString())
-                        }
-                    }
-
-                }
-            }
-
-
-            override fun onPayloadTransferUpdate(
-                endpointId: String,
-                update: PayloadTransferUpdate,
-            ) {
-                // Bytes payloads are sent as a single chunk, so you'll receive a SUCCESS update immediately
-                // after the call to onPayloadReceived().
-            }
-        }
-
-
-// ---------------------------------------------------------------------------------
-// Nearby Connections - Disconnecting
-// ---------------------------------------------------------------------------------
-// Finally, disconnectFromEndpoint() disconnects from a particular remote endpoint,
-// and stopAllEndpoints() disconnects from all connected endpoints. Remote endpoints
-// are notified of disconnection via the ConnectionLifecycleCallback.onDisconnected().
-
-//------------------------------------------------------------------------------
-// Senders and Receivers both can expect the PayloadCallback.onPayloadTransferUpdate() callback to be invoked to update them about the progress of outgoing and incoming Payloads, respectively.
-//
-// The connections established are full-duplex, which means that Advertisers and Discoverers can simultaneously send and receive Payloads.
-// ---------------------------------------------------------------------------------
-// Disconnecting
-// ---------------------------------------------------------------------------------
-// Finally, disconnectFromEndpoint() disconnects from a particular remote endpoint, and stopAllEndpoints() disconnects from all connected endpoints. Remote endpoints are notified of disconnection via the ConnectionLifecycleCallback.onDisconnected().
-*/
 
 // ----------------------------------------------------------------------------------
 // serialize and encrypt
@@ -745,13 +557,19 @@ class MainActivity : ComponentActivity() {
 // permissions end
 //---------------------------------------------------------------
 
-
+// --------------------------------------------------------------
+// nearby connections start
+//---------------------------------------------------------------
 
     private fun startDiscovery(){
         val options = DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
         connectionsClient.startDiscovery(packageName,endpointDiscoveryCallback,options)
         //if(debugging){toastLong("discovering")}
     }
+
+// --------------------------------------------------------------
+// nearby connections end
+//---------------------------------------------------------------
 
 } // end
 
