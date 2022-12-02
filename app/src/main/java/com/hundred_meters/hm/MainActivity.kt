@@ -21,14 +21,9 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.*
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import com.google.android.gms.nearby.connection.DiscoveryOptions
-import java.lang.Exception
-import kotlin.text.Charsets.UTF_8
 
 
 const val TAG = "mfmf"
@@ -39,18 +34,24 @@ class MainActivity : ComponentActivity() {
     val context: Context = this
     private var debugging = true
 
+    // just a convenient Blah.
+    private val safetyBlah: Blah = Blah(
+        topic = "100m",
+        body = "100m",
+        randomNumberID = 0
+    )
+
+
 // =================================================================================
 // NEARBY CONNECTIONS start
 // =================================================================================
 
     var messageReceived : Array<Blah> = arrayOf()
-    var theseMessages : Array<Blah> = arrayOf()
 
     /** callback for receiving payloads */
     private val payloadCallback: PayloadCallback = object : PayloadCallback() {
         override fun onPayloadReceived(endpointId: String, payload: Payload) {
             payload.asBytes()?.let {
-                //messageReceived = String(it, UTF_8)
                 messageReceived = unSerialise(it)
             }
         }
@@ -59,10 +60,8 @@ class MainActivity : ComponentActivity() {
 
             if (update.status == PayloadTransferUpdate.Status.SUCCESS
                 && messageReceived.isNotEmpty()) {
-                val oc = messageReceived!!
-                // delete
+                val oc = messageReceived
                 showFoundNotifications(oc)
-
                 messageReceived = arrayOf()
             }
         }
@@ -74,6 +73,7 @@ class MainActivity : ComponentActivity() {
             // Accepting a connection means you want to receive messages. Hence, the API expects
             // that you attach a PayloadCall to the acceptance
             connectionsClient.acceptConnection(endpointId, payloadCallback)
+            toastShort(getString(R.string.connected))
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
@@ -81,19 +81,14 @@ class MainActivity : ComponentActivity() {
                 //connectionsClient.stopAdvertising()
                 //connectionsClient.stopDiscovery()
                 opponentEndpointId = endpointId
-                //binding.opponentName.text = opponentName
-                //setGameControllerEnabled(true) // we can start playing
-                //prepareMessages("from michael")
-                prepareMessages(arrayOf(Blah(topic ="blah", body = "from array of blah", randomNumberID = 1)))
-
-
+                prepareMessages()
 
             }
         }
 
         override fun onDisconnected(endpointId: String) {
             //resetGame()
-            Log.d(TAG, "disconnected")
+            toastShort(getString(R.string.disconnected))
         }
     }
 
@@ -131,7 +126,7 @@ class MainActivity : ComponentActivity() {
         // ------- observe data in viewModel ----------------------------------------------
         // --------------------------------------------------------------------------------
         // note: to show notifications you need to send the blah to MainViewModel first.
-        // it should be done that way, i think, to allow for lifecycle changes.
+        // it should be done that way, i think, to be lifecycle aware.
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
@@ -168,11 +163,11 @@ class MainActivity : ComponentActivity() {
 
         // ------------------------------------------------
 
-        // nearby connections 1 and 2--------------------------------------
+        // nearby connections --------------------------------------
         // start nearby connect
         startAdvertising()
         startDiscovery()
-        // nearby connections 1 and 2--------------------------------------
+        // nearby connections --------------------------------------
 
         debug()
     }
@@ -208,15 +203,10 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    // just a convenience Blah.
-    private val safetyBlah: Blah = Blah(
-        topic = "100m",
-        body = "100m",
-        randomNumberID = 0
-    )
 
 
     fun showFoundNotifications(blahArray: Array<Blah>) {
+        // sends messages to viewmodel to be lifecycyle aware
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
         mainViewModel.showNotificationArray(blahArray)
@@ -353,7 +343,7 @@ class MainActivity : ComponentActivity() {
 // NOTIFICATION ends
 // ------------------------------------------------------------------------
 
-    // =================================================================================
+// =================================================================================
 // NEARBY CONNECTIONS start
 // =================================================================================
     private val STRATEGY = Strategy.P2P_CLUSTER
@@ -364,16 +354,12 @@ class MainActivity : ComponentActivity() {
 
     //private lateinit var binding: ActivityMainBinding
 
-    fun prepareMessages(someMessages : Array<Blah>){
-        theseMessages = someMessages
-
-        //val testBlah = Blah(topic = someMessages, body = someMessages, randomNumberID = 1)
-        //val arrayOfMessages : Array<Blah> = arrayOf(testBlah)
+    fun prepareMessages(){
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        theseMessages = mainViewModel.blahList.toTypedArray()
+        val theseMessages = mainViewModel.blahList.toTypedArray()
 
-        var byteArrayOfBlahArrayOfMessages = serialise(theseMessages)
+        val byteArrayOfBlahArrayOfMessages = serialise(theseMessages)
         sendMessages(byteArrayOfBlahArrayOfMessages)
     }
 
@@ -388,16 +374,20 @@ class MainActivity : ComponentActivity() {
     private fun startAdvertising() {
         val options = AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
         // Note: Advertising may fail. To keep this demo simple, we don't handle failures.
+        val myName = "myName"
         connectionsClient.startAdvertising(
             "myCodeName", // myCodeName
             packageName,
             connectionLifecycleCallback,
             options
         )
-        //if (debugging){toastShort("advertising")}
+        if (debugging){
+            val nameBlah = Blah(topic = "debugging", body = "name: $myName", randomNumberID = 0)
+            showNotification(nameBlah)
+        }
     }
 
-
+// TODO give a useful name at startAdvertising().
 
 // =================================================================================
 // NEARBY CONNECTIONS end
@@ -421,9 +411,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    // temp
     fun unSerialise(foundMessages: ByteArray?): Array<Blah> {
-    //fun unSerialise(foundMessages: ByteArray?): String {
 
         if (foundMessages != null) {
             if (foundMessages.isNotEmpty()) {
@@ -433,9 +421,7 @@ class MainActivity : ComponentActivity() {
                 return step4
             }
         }
-        // temp
-        //return "nothing from unserialise"
-        return (arrayOf(Blah(topic ="test", body = "nothing returned from unSerialise", randomNumberID = 1)))
+        return arrayOf(safetyBlah)
     }
 
 

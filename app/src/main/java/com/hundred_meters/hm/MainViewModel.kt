@@ -14,14 +14,15 @@ class MainViewModel : ViewModel() {
         randomNumberID = 0
     )
 
-
     var emptyBlahArray : Array<Blah> = arrayOf(emptyBlah, emptyBlah)
 
     private var listOfUsersTopics = mutableListOf<String>()
 
     // -------------------------------------------------------------------
-    // public data exchanged from here     -------------------------------
+    // data exchanged  using livedata ------------------------------------
     // -------------------------------------------------------------------
+    // it doesn't feel like i did this right. i don't really understand
+    // livedata or viewmodels, and the documentation is shit, or i'm stupid.
 
     private val _blahList = mutableStateListOf<Blah>()
 
@@ -34,14 +35,16 @@ class MainViewModel : ViewModel() {
 
 
     // -------------------------------------------------------------------
-    // public data exchanged from here  end  -----------------------------
+    // data exchanged using livedata end ---------------------------------
     // -------------------------------------------------------------------
 
     // -------------------------------------------------------------------
     // data for UI Compose via observing ------- start  ------------------
     // -------------------------------------------------------------------
+    // it doesn't feel like i did this right. i don't really understand
+    // observing state to exchange data, and the documentation is shit.
 
-    // stateBlah is the data in the ui - what the user sees it the topic and message text boxes
+    // stateBlah is the data in the ui - what the user sees in the topic and message text boxes
     var stateBlah by mutableStateOf(emptyBlah)
         private set
 
@@ -93,7 +96,9 @@ class MainViewModel : ViewModel() {
     fun showNotificationArray(blahs : Array<Blah> = emptyBlahArray){
         // TODO reinstate keepBlah
         for (b in blahs){
-            newMessageForNotification.value = b
+            if (keepBlah(b.topic)) {
+                newMessageForNotification.value = b
+            }
         }
 
     }
@@ -189,9 +194,8 @@ class MainViewModel : ViewModel() {
         triggerBlahComposeState(blah)
     }
 
-
     fun keepBlah(checkThisTopic: String): Boolean {
-
+        // reject #blahs that don't have a topic the user has already used
         if (!checkThisTopic.startsWith("#"))
         {
             return true

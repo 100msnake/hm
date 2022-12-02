@@ -22,4 +22,6 @@
     <string name="test">TEST</string>
     <string name="credits">100m created by Michael Foster 2022 100msnake@gmail.com</string>
     <string name="credits_topic">CREDITS</string>
+    <string name="connected">connected</string>
+    <string name="disconnected">disconnected</string>
 </resources>
