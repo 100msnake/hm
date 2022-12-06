@@ -3,10 +3,10 @@
     <string name="error_missing_permissions">you didn\'t give permission for this</string>
     <string name="sending">sending...</string>
     <string name="intro">This app sends notifications to other people using the app ( within 100m or so )</string>
-    <string name="persist">Leave 100m running ( don\'t swipe it off the screen ) and it will keep searching and sending…</string>
+    <string name="persist">Leave 100m running (don\'t swipe it off the screen) and it will keep searching and sending…</string>
     <string name="messages">The messages you\'re sending:</string>
     <string name="send_a_new_message">Send a new notification:</string>
-    <string name="private_switch">Private: send only to people using the same topic ( # )</string>
+    <string name="private_switch">Only to people using the same topic (adds #)</string>
     <string name="send">send</string>
     <string name="topic">topic</string>
     <string name="message">message</string>
@@ -22,6 +22,6 @@
     <string name="test">TEST</string>
     <string name="credits">100m created by Michael Foster 2022 100msnake@gmail.com</string>
     <string name="credits_topic">CREDITS</string>
-    <string name="connected">connected</string>
+    <string name="connected">connecting</string>
     <string name="disconnected">disconnected</string>
 </resources>

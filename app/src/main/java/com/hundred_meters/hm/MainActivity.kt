@@ -14,6 +14,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.CallSuper
 import androidx.compose.material.Surface
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -32,7 +33,7 @@ const val TAG = "mfmf"
 class MainActivity : ComponentActivity() {
 
     val context: Context = this
-    private var debugging = true
+    private var debugging = false
 
     // just a convenient Blah.
     private val safetyBlah: Blah = Blah(
@@ -58,11 +59,14 @@ class MainActivity : ComponentActivity() {
 
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
 
-            if (update.status == PayloadTransferUpdate.Status.SUCCESS
-                && messageReceived.isNotEmpty()) {
-                val oc = messageReceived
-                showFoundNotifications(oc)
-                messageReceived = arrayOf()
+            if (update.status == PayloadTransferUpdate.Status.SUCCESS) {
+                if (messageReceived.isNotEmpty()) {
+                    showFoundNotifications(messageReceived)
+                    messageReceived = arrayOf()
+                    // mf dec 6
+                    //opponentEndpointId?.let { connectionsClient.disconnectFromEndpoint(it)}
+                    // mf dec 6
+                }
             }
         }
     }
@@ -132,6 +136,9 @@ class MainActivity : ComponentActivity() {
 
         val newMessageObserver = Observer<Blah> { newMessageByUser ->
             showNotification(message = newMessageByUser)
+            // mf dec 26
+            prepareMessages()
+            // mf dec 26
         }
 
         mainViewModel.newMessageForNotification.observe(this, newMessageObserver)
@@ -374,7 +381,7 @@ class MainActivity : ComponentActivity() {
     private fun startAdvertising() {
         val options = AdvertisingOptions.Builder().setStrategy(STRATEGY).build()
         // Note: Advertising may fail. To keep this demo simple, we don't handle failures.
-        val myName = "myName"
+        val myName = "100m"
         connectionsClient.startAdvertising(
             "myCodeName", // myCodeName
             packageName,
@@ -382,12 +389,16 @@ class MainActivity : ComponentActivity() {
             options
         )
         if (debugging){
-            val nameBlah = Blah(topic = "debugging", body = "name: $myName", randomNumberID = 0)
+            val nameBlah = Blah(topic = "debugging", body = "name: $myName can be something useful", randomNumberID = 0)
             showNotification(nameBlah)
         }
     }
 
 // TODO give a useful name at startAdvertising().
+
+
+
+
 
 // =================================================================================
 // NEARBY CONNECTIONS end
@@ -552,6 +563,19 @@ class MainActivity : ComponentActivity() {
         connectionsClient.startDiscovery(packageName,endpointDiscoveryCallback,options)
         //if(debugging){toastLong("discovering")}
     }
+
+    @CallSuper
+    override fun onStop(){
+        connectionsClient.apply {
+            stopAdvertising()
+            stopDiscovery()
+            stopAllEndpoints()
+        }
+        //resetGame()
+        super.onStop()
+    }
+
+
 
 // --------------------------------------------------------------
 // nearby connections end

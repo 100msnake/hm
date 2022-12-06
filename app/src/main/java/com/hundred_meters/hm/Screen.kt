@@ -219,7 +219,6 @@ fun Screen(
                             val toast = Toast.makeText(screenContext, text, duration)
                             toast.show()
                         }
-
                     },
                 )
             }
