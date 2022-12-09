@@ -111,11 +111,8 @@ class MainViewModel : ViewModel() {
         for (b in _blahList) {
             if (b.randomNumberID == IDToDelete)
             {
-                if (_blahList.contains(b))
-                {
-                    _blahList.remove(b)
-                }
-
+                _blahList.remove(b)
+                listOfUsersTopics.remove(b.topic)
             }
         }
     }

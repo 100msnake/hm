@@ -64,6 +64,7 @@ class MainActivity : ComponentActivity() {
                     showFoundNotifications(messageReceived)
                     messageReceived = arrayOf()
                     // mf dec 6
+                    // this just means only 1 connection. so not what i wanted.
                     //opponentEndpointId?.let { connectionsClient.disconnectFromEndpoint(it)}
                     // mf dec 6
                 }
@@ -77,7 +78,7 @@ class MainActivity : ComponentActivity() {
             // Accepting a connection means you want to receive messages. Hence, the API expects
             // that you attach a PayloadCall to the acceptance
             connectionsClient.acceptConnection(endpointId, payloadCallback)
-            toastShort(getString(R.string.connected))
+            toastLong(getString(R.string.connected))
         }
 
         override fun onConnectionResult(endpointId: String, result: ConnectionResolution) {
@@ -92,7 +93,7 @@ class MainActivity : ComponentActivity() {
 
         override fun onDisconnected(endpointId: String) {
             //resetGame()
-            toastShort(getString(R.string.disconnected))
+            toastLong(getString(R.string.disconnected))
         }
     }
 
@@ -136,9 +137,6 @@ class MainActivity : ComponentActivity() {
 
         val newMessageObserver = Observer<Blah> { newMessageByUser ->
             showNotification(message = newMessageByUser)
-            // mf dec 26
-            prepareMessages()
-            // mf dec 26
         }
 
         mainViewModel.newMessageForNotification.observe(this, newMessageObserver)
@@ -363,14 +361,21 @@ class MainActivity : ComponentActivity() {
 
     fun prepareMessages(){
 
-        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-        val theseMessages = mainViewModel.blahList.toTypedArray()
-
-        val byteArrayOfBlahArrayOfMessages = serialise(theseMessages)
-        sendMessages(byteArrayOfBlahArrayOfMessages)
+        if (!opponentEndpointId.isNullOrBlank()) {
+            val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+            //if (mainViewModel.blahList.isEmpty()){return}
+            var theseMessages = mainViewModel.blahList.toTypedArray()
+            // TODO why is safetyBlah saving the app from crashing?
+            if (theseMessages.isNullOrEmpty()){
+                theseMessages = arrayOf(safetyBlah)
+            }
+            val byteArrayOfBlahArrayOfMessages = serialise(theseMessages)
+            sendMessages(byteArrayOfBlahArrayOfMessages)
+        }
     }
 
     private fun sendMessages(messageToSend: ByteArray) {
+        //if (opponentEndpointId.isEmpty()){return}
         connectionsClient.sendPayload(
             opponentEndpointId!!,
             Payload.fromBytes(messageToSend)
@@ -564,6 +569,8 @@ class MainActivity : ComponentActivity() {
         //if(debugging){toastLong("discovering")}
     }
 
+/*
+// onStop can stop the app working in the background, which is not wanted. Perhaps an option in future.
     @CallSuper
     override fun onStop(){
         connectionsClient.apply {
@@ -575,7 +582,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-
+*/
 
 // --------------------------------------------------------------
 // nearby connections end
