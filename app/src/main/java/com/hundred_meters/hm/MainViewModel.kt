@@ -16,8 +16,8 @@ class MainViewModel : ViewModel() {
     )
 
     var tempBlah : Blah = Blah(
-        topic = "temp",
-        body = "sort out blahs with a randomNumberID of 0, dude, FFS",
+        topic = "100m",
+        body = "100m",
         randomNumberID = 0
     )
 
@@ -31,7 +31,7 @@ class MainViewModel : ViewModel() {
     // it doesn't feel like i did this right. i don't really understand
     // livedata or viewmodels, and the documentation is shit, or i'm stupid.
 
-    private val _blahList = mutableStateListOf<Blah>(tempBlah)
+    private val _blahList = mutableStateListOf<Blah>() //(tempBlah)
 
     val blahList: List<Blah>
         get() = _blahList

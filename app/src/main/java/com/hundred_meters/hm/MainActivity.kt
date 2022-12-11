@@ -281,8 +281,8 @@ class MainActivity : ComponentActivity() {
     private fun blahOK(blah: Blah): Boolean {
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        if (blah.body.isBlank()) {
-            mainViewModel.makeBodyOK(blah)
+        if (blah.body.isEmpty()) {
+            //mainViewModel.makeBodyOK(blah)
         }
         if (blah.topic.isEmpty()) {
             toastLong(getString(R.string.topic_needed))
@@ -369,6 +369,7 @@ class MainActivity : ComponentActivity() {
     private fun sendMessages() {
 
         if (opponentEndpointId.isNullOrBlank()){return}
+
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
         var theseMessages = safetyBlahArray
         if (mainViewModel.blahList.isNotEmpty()){theseMessages = mainViewModel.blahList.toTypedArray()}
@@ -376,10 +377,6 @@ class MainActivity : ComponentActivity() {
 
             //theseMessages = mainViewModel.blahList.toTypedArray()
             //serialisedMessages = serialise(theseMessages)
-
-
-
-
 
             connectionsClient.sendPayload(
                 opponentEndpointId!!,
