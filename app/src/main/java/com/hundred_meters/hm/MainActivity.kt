@@ -37,10 +37,12 @@ class MainActivity : ComponentActivity() {
 
     // just a convenient Blah.
     private val safetyBlah: Blah = Blah(
-        topic = "100m",
-        body = "100m",
+        topic = "",
+        body = "",
         randomNumberID = 0
     )
+
+    private val safetyBlahArray = arrayOf(safetyBlah)
 
 
 // =================================================================================
@@ -86,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 //connectionsClient.stopAdvertising()
                 //connectionsClient.stopDiscovery()
                 opponentEndpointId = endpointId
-                prepareMessages()
+                sendMessages()
 
             }
         }
@@ -137,6 +139,7 @@ class MainActivity : ComponentActivity() {
 
         val newMessageObserver = Observer<Blah> { newMessageByUser ->
             showNotification(message = newMessageByUser)
+            sendMessages()
         }
 
         mainViewModel.newMessageForNotification.observe(this, newMessageObserver)
@@ -164,6 +167,13 @@ class MainActivity : ComponentActivity() {
 
         // ------------------------------------------------
         // nearby connections 2
+        startNearbyConnections()
+        // nearby connections --------------------------------------
+
+        debug()
+    }
+
+    fun startNearbyConnections(){
         connectionsClient = Nearby.getConnectionsClient(this)
 
         // ------------------------------------------------
@@ -172,11 +182,7 @@ class MainActivity : ComponentActivity() {
         // start nearby connect
         startAdvertising()
         startDiscovery()
-        // nearby connections --------------------------------------
-
-        debug()
     }
-
     // ------------------------------------------------------------------------
     // debug
     // ------------------------------------------------------------------------
@@ -185,7 +191,6 @@ class MainActivity : ComponentActivity() {
         if (debugging) {
             Log.d(TAG, "debugging on: private var debugging = true\n")
         }
-
     }
     // ------------------------------------------------------------------------
     // NOTIFICATION
@@ -359,27 +364,28 @@ class MainActivity : ComponentActivity() {
 
     //private lateinit var binding: ActivityMainBinding
 
-    fun prepareMessages(){
 
-        if (!opponentEndpointId.isNullOrBlank()) {
-            val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
-            //if (mainViewModel.blahList.isEmpty()){return}
-            var theseMessages = mainViewModel.blahList.toTypedArray()
-            // TODO why is safetyBlah saving the app from crashing?
-            if (theseMessages.isNullOrEmpty()){
-                theseMessages = arrayOf(safetyBlah)
-            }
-            val byteArrayOfBlahArrayOfMessages = serialise(theseMessages)
-            sendMessages(byteArrayOfBlahArrayOfMessages)
-        }
-    }
 
-    private fun sendMessages(messageToSend: ByteArray) {
-        //if (opponentEndpointId.isEmpty()){return}
-        connectionsClient.sendPayload(
-            opponentEndpointId!!,
-            Payload.fromBytes(messageToSend)
-        )
+    private fun sendMessages() {
+
+        if (opponentEndpointId.isNullOrBlank()){return}
+        val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        var theseMessages = safetyBlahArray
+        if (mainViewModel.blahList.isNotEmpty()){theseMessages = mainViewModel.blahList.toTypedArray()}
+        var serialisedMessages = serialise(theseMessages)
+
+            //theseMessages = mainViewModel.blahList.toTypedArray()
+            //serialisedMessages = serialise(theseMessages)
+
+
+
+
+
+            connectionsClient.sendPayload(
+                opponentEndpointId!!,
+                Payload.fromBytes(serialisedMessages)
+            )
+
     }
 
 
@@ -393,10 +399,7 @@ class MainActivity : ComponentActivity() {
             connectionLifecycleCallback,
             options
         )
-        if (debugging){
-            val nameBlah = Blah(topic = "debugging", body = "name: $myName can be something useful", randomNumberID = 0)
-            showNotification(nameBlah)
-        }
+
     }
 
 // TODO give a useful name at startAdvertising().
@@ -527,6 +530,7 @@ class MainActivity : ComponentActivity() {
                 if (debugging) {
                     Log.d(TAG, "\nok: $thisPermission")
                 }
+
             } else {
                 if (debugging) {
                     Log.d(TAG, "\nrequested permission for $thisPermission")
@@ -546,6 +550,7 @@ class MainActivity : ComponentActivity() {
             if (isGranted) {
                 if (debugging) {
                     Log.d(TAG, "requestPermissionLauncher")
+
                 }
             } else {
 

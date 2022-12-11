@@ -1,5 +1,6 @@
 package com.hundred_meters.hm
 
+import android.provider.Settings.Global.getString
 import android.util.Log
 import androidx.compose.runtime.*
 import androidx.lifecycle.MutableLiveData
@@ -14,6 +15,12 @@ class MainViewModel : ViewModel() {
         randomNumberID = 0
     )
 
+    var tempBlah : Blah = Blah(
+        topic = "temp",
+        body = "sort out blahs with a randomNumberID of 0, dude, FFS",
+        randomNumberID = 0
+    )
+
     var emptyBlahArray : Array<Blah> = arrayOf(emptyBlah, emptyBlah)
 
     private var listOfUsersTopics = mutableListOf<String>()
@@ -24,7 +31,7 @@ class MainViewModel : ViewModel() {
     // it doesn't feel like i did this right. i don't really understand
     // livedata or viewmodels, and the documentation is shit, or i'm stupid.
 
-    private val _blahList = mutableStateListOf<Blah>()
+    private val _blahList = mutableStateListOf<Blah>(tempBlah)
 
     val blahList: List<Blah>
         get() = _blahList
@@ -63,7 +70,9 @@ class MainViewModel : ViewModel() {
     // -------------------------------------------------------------------
     // data for UI Compose via observing -------end ----------------------
     // -------------------------------------------------------------------
-
+    fun clearTextEntryBoxes(){
+        stateBlah = emptyBlah
+    }
 
     fun newBlah(
         newTopic: String = stateBlah.topic,
@@ -73,7 +82,7 @@ class MainViewModel : ViewModel() {
         var newBodyVar = newBody
 
         if (newBodyVar.isEmpty()) {
-            newBodyVar = "*"
+            newBodyVar = "\t\uD83D\uDE08" //"*"
             addToStateBlahBody(newBodyVar)
         }
         if (newTopic.isEmpty()) {
@@ -91,6 +100,7 @@ class MainViewModel : ViewModel() {
         _blahList.add(blah)
         newMessageForNotification.value = blah
         listOfUsersTopics.add(newTopic)
+        clearTextEntryBoxes()
     }
 
     fun showNotificationArray(blahs : Array<Blah> = emptyBlahArray){
@@ -214,7 +224,8 @@ class MainViewModel : ViewModel() {
         // makes it more obvious the user is watching a topic without contributing.
 
         if (blah.body.trim().isEmpty()) {
-            blah.body = "*"
+            blah.body = "\t\uD83D\uDE08"
+            //(getString(R.string.error_missing_permissions))
             addToStateBlahBody(blah.body)
         }
         return blah.body
