@@ -27,21 +27,39 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 
-const val TAG = "mfmf"
+
+// THE BASIC IDEA
+// Whenever the user creates a new message it is sent to the main viewModel
+// and stored in a array called blahList which can be used by the user interface
+// and Nearby Connections.
+// Whenever Nearby Connections makes a new connection
+// the array of Blahs the user has created (blahList)
+// is JSON serialised and sent by Nearby Connections.
+// During the same connection messages are received and unserialised
+// and sent to the main viewModel to be held and will become a notification
+// depending, i assume, on the lifecycle awareness of the viewModel.
+// At the moment there is no database or file to store any messages with persistence.
+// I prefer the data disappears when the app stops running, for the privacy of the user.
+
+const val TAG = "mfmf" // just for logging.
 
 
 class MainActivity : ComponentActivity() {
 
     val context: Context = this
-    private var debugging = false
+    private var debugging = false  // always false in release version of app
 
-    // just a convenient Blah.
+    // safetyBlah is just a convenience instance of a Blah.
+    // The app passes round Blahs that hold the messages.
+    // If you want to include more types of data in a Blah,
+    // edit the Blah definition in the  data.kt file.
     private val safetyBlah: Blah = Blah(
         topic = "",
         body = "",
         randomNumberID = 0
     )
 
+    // the app collects Blahs into arrays. just sayin'.
     private val safetyBlahArray = arrayOf(safetyBlah)
 
 
@@ -49,7 +67,8 @@ class MainActivity : ComponentActivity() {
 // NEARBY CONNECTIONS start
 // =================================================================================
 
-    var messageReceived : Array<Blah> = arrayOf()
+
+    var messageReceived: Array<Blah> = arrayOf()
 
     /** callback for receiving payloads */
     private val payloadCallback: PayloadCallback = object : PayloadCallback() {
@@ -65,10 +84,9 @@ class MainActivity : ComponentActivity() {
                 if (messageReceived.isNotEmpty()) {
                     showFoundNotifications(messageReceived)
                     messageReceived = arrayOf()
-                    // mf dec 6
-                    // this just means only 1 connection. so not what i wanted.
+                    // mf should it disconnect? i think i tested it and decided NO, but needs testing again.
                     //opponentEndpointId?.let { connectionsClient.disconnectFromEndpoint(it)}
-                    // mf dec 6
+                    // mf
                 }
             }
         }
@@ -89,7 +107,6 @@ class MainActivity : ComponentActivity() {
                 //connectionsClient.stopDiscovery()
                 opponentEndpointId = endpointId
                 sendMessages()
-
             }
         }
 
@@ -102,13 +119,16 @@ class MainActivity : ComponentActivity() {
     // Callbacks for finding other devices
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-            connectionsClient.requestConnection("myCodeName", endpointId, connectionLifecycleCallback)
+            connectionsClient.requestConnection(
+                "myCodeName",
+                endpointId,
+                connectionLifecycleCallback
+            )
         }
 
         override fun onEndpointLost(endpointId: String) {
         }
     }
-
 
 
 // =================================================================================
@@ -159,21 +179,20 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
+        // notification system holds channels from last time app was used. start afresh.
         clearNotificationChannels()
 
         // ask user for location permission on launch
         checkForPermission()
 
-        // ------------------------------------------------
-        // nearby connections 2
+        // nearby connections --------------------------------------
         startNearbyConnections()
         // nearby connections --------------------------------------
 
         debug()
-    }
+    } // end of onCreate
 
-    fun startNearbyConnections(){
+    fun startNearbyConnections() {
         connectionsClient = Nearby.getConnectionsClient(this)
 
         // ------------------------------------------------
@@ -204,6 +223,8 @@ class MainActivity : ComponentActivity() {
         // so, a record remains in the notification channels of what topics the user used
         // until the next start. not sure if that matters or not.
 
+        // does this destroy only our channels, or all channels for all other programs?
+
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channelList: List<NotificationChannel> = notificationManager.notificationChannels
         for (channel in channelList) {
@@ -211,8 +232,6 @@ class MainActivity : ComponentActivity() {
         }
 
     }
-
-
 
 
     fun showFoundNotifications(blahArray: Array<Blah>) {
@@ -234,20 +253,13 @@ class MainActivity : ComponentActivity() {
 
         if (blahOK(message)) {
 
-            // is stateBlah correct here? should it be message
-            //val CHANNEL_ID = mainViewModel.stateBlah.topic
             val CHANNEL_ID = message.topic
-
-
-            // is stateBlah correct here? should it be message
-            //val group = mainViewModel.stateBlah.topic
-            // maybe "100m"
             val group = message.topic
 
             // low importance for defult notification channel.
-            // descretion seems the right choice. user can upgrade channel if they want
+            // discretion seems the right choice. user can upgrade channel if they want
             createNotificationChannel(
-                blah = message, //mainViewModel.stateBlah,
+                blah = message,
                 importance1to5 = NotificationManager.IMPORTANCE_LOW
             )
 
@@ -281,9 +293,11 @@ class MainActivity : ComponentActivity() {
     private fun blahOK(blah: Blah): Boolean {
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        if (blah.body.isEmpty()) {
+        //if (blah.body.isEmpty()) {
             //mainViewModel.makeBodyOK(blah)
-        }
+            // calling this here causes duplication. so, dont. just a reminder because it seems to belong here.
+        //}
+
         if (blah.topic.isEmpty()) {
             toastLong(getString(R.string.topic_needed))
             return false
@@ -353,7 +367,7 @@ class MainActivity : ComponentActivity() {
 // NOTIFICATION ends
 // ------------------------------------------------------------------------
 
-// =================================================================================
+    // =================================================================================
 // NEARBY CONNECTIONS start
 // =================================================================================
     private val STRATEGY = Strategy.P2P_CLUSTER
@@ -365,23 +379,26 @@ class MainActivity : ComponentActivity() {
     //private lateinit var binding: ActivityMainBinding
 
 
-
     private fun sendMessages() {
 
-        if (opponentEndpointId.isNullOrBlank()){return}
+        if (opponentEndpointId.isNullOrBlank()) {
+            return
+        }
 
         val mainViewModel: MainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
         var theseMessages = safetyBlahArray
-        if (mainViewModel.blahList.isNotEmpty()){theseMessages = mainViewModel.blahList.toTypedArray()}
+        if (mainViewModel.blahList.isNotEmpty()) {
+            theseMessages = mainViewModel.blahList.toTypedArray()
+        }
         var serialisedMessages = serialise(theseMessages)
 
-            //theseMessages = mainViewModel.blahList.toTypedArray()
-            //serialisedMessages = serialise(theseMessages)
+        //theseMessages = mainViewModel.blahList.toTypedArray()
+        //serialisedMessages = serialise(theseMessages)
 
-            connectionsClient.sendPayload(
-                opponentEndpointId!!,
-                Payload.fromBytes(serialisedMessages)
-            )
+        connectionsClient.sendPayload(
+            opponentEndpointId!!,
+            Payload.fromBytes(serialisedMessages)
+        )
 
     }
 
@@ -402,13 +419,9 @@ class MainActivity : ComponentActivity() {
 // TODO give a useful name at startAdvertising().
 
 
-
-
-
 // =================================================================================
 // NEARBY CONNECTIONS end
 // =================================================================================
-
 
 
 // ----------------------------------------------------------------------------------
@@ -565,9 +578,9 @@ class MainActivity : ComponentActivity() {
 // nearby connections start
 //---------------------------------------------------------------
 
-    private fun startDiscovery(){
+    private fun startDiscovery() {
         val options = DiscoveryOptions.Builder().setStrategy(STRATEGY).build()
-        connectionsClient.startDiscovery(packageName,endpointDiscoveryCallback,options)
+        connectionsClient.startDiscovery(packageName, endpointDiscoveryCallback, options)
         //if(debugging){toastLong("discovering")}
     }
 

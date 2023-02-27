@@ -11,8 +11,8 @@ android {
         applicationId "com.hundred_meters.hm"
         minSdk 26
         targetSdk 33
-        versionCode 28
-        versionName "1.28"
+        versionCode 30 // THE version
+        versionName "1.30"  // THE version
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

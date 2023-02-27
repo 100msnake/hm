@@ -240,10 +240,10 @@ fun Screen(
             // ---------------- persist string -----------------------------
             // -------------------------------------------------------------
 
-            Text(
-                modifier = modifier,
-                text = stringResource(id = R.string.persist)
-            )
+            //Text(
+            //    modifier = modifier,
+            //    text = stringResource(id = R.string.persist)
+            //)
 
             // -------------------------------------------------------------
             // ---------------- divider ------------------------------------
